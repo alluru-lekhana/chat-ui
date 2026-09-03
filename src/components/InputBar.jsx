@@ -1,12 +1,14 @@
 import { useState } from 'react'
 
-export default function InputBar() {
+export default function InputBar({ onSend }) {
   const [value, setValue] = useState('')
 
-  // Day 3 wires this up to useState-managed messages + the send handler.
-  // For now the field is functional to type in, but submission is not yet live.
   const handleSubmit = (e) => {
     e.preventDefault()
+    const trimmed = value.trim()
+    if (trimmed.length === 0) return
+    onSend(trimmed)
+    setValue('')
   }
 
   return (

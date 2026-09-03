@@ -1,23 +1,13 @@
 import MessageBubble from './MessageBubble.jsx'
 
-// Day 2 preview data only — just here to check MessageBubble spacing/alignment.
-// Day 3 replaces this with the real messages array driven by useState.
-const PREVIEW_MESSAGES = [
-  { role: 'user', text: 'Which colleges in Chennai offer Computer Science Engineering?' },
-  {
-    role: 'assistant',
-    text: 'Anna University, SSN College of Engineering, and 6 other colleges in Chennai offer CSE. Sources appear below each answer once Week 3 connects the real API.',
-  },
-]
-
-export default function MessageArea() {
-  const hasMessages = PREVIEW_MESSAGES.length > 0
+export default function MessageArea({ messages }) {
+  const hasMessages = messages.length > 0
 
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col px-5 sm:px-8">
       {hasMessages ? (
         <div className="flex flex-col py-6">
-          {PREVIEW_MESSAGES.map((m, i) => (
+          {messages.map((m, i) => (
             <MessageBubble key={i} role={m.role} text={m.text} />
           ))}
         </div>
