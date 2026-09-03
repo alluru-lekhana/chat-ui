@@ -4,10 +4,10 @@ React chat interface for the TN Colleges RAG project. Frontend only — no backe
 
 ## Setup
 
-```bash
+\`\`\`bash
 npm install
 npm run dev
-```
+\`\`\`
 
 Then open the local URL Vite prints (usually http://localhost:5173).
 
