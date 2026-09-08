@@ -1,4 +1,5 @@
 import MessageBubble from './MessageBubble.jsx'
+import LoadingIndicator from './LoadingIndicator.jsx'
 
 const suggestedQuestions = [
   'Which colleges in Chennai offer Computer Science Engineering?',
@@ -6,7 +7,11 @@ const suggestedQuestions = [
   'What is the total intake for NIT Trichy across all branches?',
 ]
 
-export default function MessageArea({ messages, onQuestionClick }) {
+export default function MessageArea({
+  messages,
+  onQuestionClick,
+  isLoading,
+}) {
   const hasMessages = messages.length > 0
 
   return (
@@ -14,12 +19,15 @@ export default function MessageArea({ messages, onQuestionClick }) {
       {hasMessages ? (
         <div className="flex flex-col py-6">
           {messages.map((m, i) => (
-            <MessageBubble
-              key={i}
-              role={m.role}
-              text={m.text}
-            />
-          ))}
+  <MessageBubble
+    key={i}
+    role={m.role}
+    text={m.text}
+    sources={m.sources}
+  />
+))}
+
+{isLoading && <LoadingIndicator />}
         </div>
       ) : (
         <div className="flex flex-1 flex-col justify-center py-12 sm:py-16">

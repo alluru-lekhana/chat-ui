@@ -1,4 +1,6 @@
-export default function MessageBubble({ role, text }) {
+import SourceReferences from './SourceReferences.jsx'
+
+export default function MessageBubble({ role, text, sources = [] }) {
   const isUser = role === 'user'
 
   if (isUser) {
@@ -8,6 +10,7 @@ export default function MessageBubble({ role, text }) {
           <p className="mb-1 text-right font-mono text-[11px] text-ledger-ink/40">
             Query
           </p>
+
           <div className="border border-ledger-rule bg-white/70 px-4 py-2.5">
             <p className="font-serif text-[15px] leading-relaxed text-ledger-ink">
               {text}
@@ -21,11 +24,16 @@ export default function MessageBubble({ role, text }) {
   return (
     <div className="flex justify-start py-2">
       <div className="max-w-[80%] sm:max-w-[65%]">
-        <p className="mb-1 font-mono text-[11px] text-ledger-brass">Entry</p>
+        <p className="mb-1 font-mono text-[11px] text-ledger-brass">
+          Entry
+        </p>
+
         <div className="border-l-2 border-ledger-brass pl-4">
           <p className="font-serif text-[15px] leading-relaxed text-ledger-ink">
             {text}
           </p>
+
+          <SourceReferences sources={sources} />
         </div>
       </div>
     </div>
