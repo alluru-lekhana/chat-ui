@@ -17,6 +17,7 @@ Then open the local URL Vite prints (usually http://localhost:5173).
 - **Day 2** — `MessageBubble.jsx` component, two styles: user messages (right-aligned "Query") and AI answers (left-aligned "Entry")
 - **Day 3** — wired `useState` in `App.jsx`: typing a question and hitting Ask appends it to a messages array, `MessageArea` renders whatever's actually sent, input clears after send
 - **Day 4** — `data/fakeResponses.js` holds hardcoded Q&A pairs matching the sample questions; after sending, a fake AI answer appears ~900ms later (that delay is what Day 8's loading indicator will cover)
+- - **Day 5** — improved the responsive layout and chat experience: enhanced the empty/welcome state with clickable suggested questions, added validation to prevent empty messages, implemented manual scrolling for the chat area, and added auto-scroll to keep the latest user messages and AI responses visible
 
 Checked on a 375px-wide viewport as well as desktop widths.
 
