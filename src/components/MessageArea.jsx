@@ -1,5 +1,6 @@
 import MessageBubble from './MessageBubble.jsx'
 import LoadingIndicator from './LoadingIndicator.jsx'
+import StatusMessage from './StatusMessage.jsx'
 
 const suggestedQuestions = [
   'Which colleges in Chennai offer Computer Science Engineering?',
@@ -18,16 +19,24 @@ export default function MessageArea({
     <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 sm:px-8">
       {hasMessages ? (
         <div className="flex flex-col py-6">
-          {messages.map((m, i) => (
-  <MessageBubble
-    key={i}
-    role={m.role}
-    text={m.text}
-    sources={m.sources}
-  />
-))}
+          {messages.map((m, i) =>
+            m.status === 'no-results' ? (
+              <StatusMessage
+                key={i}
+                type="no-results"
+                message={m.text}
+              />
+            ) : (
+              <MessageBubble
+                key={i}
+                role={m.role}
+                text={m.text}
+                sources={m.sources}
+              />
+            ),
+          )}
 
-{isLoading && <LoadingIndicator />}
+          {isLoading && <LoadingIndicator />}
         </div>
       ) : (
         <div className="flex flex-1 flex-col justify-center py-12 sm:py-16">

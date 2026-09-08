@@ -6,6 +6,7 @@ export const FAKE_RESPONSES = [
     question: 'Which colleges in Chennai offer Computer Science Engineering?',
     answer:
       'Anna University, SSN College of Engineering, and 6 other colleges in Chennai offer CSE, across autonomous and private institutions.',
+      status: 'success',
     sources: [
       {
         name: 'Anna University',
@@ -21,6 +22,7 @@ export const FAKE_RESPONSES = [
     question: 'List all autonomous colleges in Coimbatore with NAAC A grade',
     answer:
       'PSG College of Technology and Coimbatore Institute of Technology are among the autonomous colleges in Coimbatore holding a NAAC A grade.',
+      status: 'success',
     sources: [
       {
         name: 'NAAC',
@@ -36,6 +38,7 @@ export const FAKE_RESPONSES = [
     question: 'What is the total intake for NIT Trichy across all branches?',
     answer:
       'NIT Trichy has a total sanctioned intake of roughly 900 seats per year across all undergraduate branches.',
+      status: 'success',
     sources: [
       {
         name: 'NIT Trichy',
@@ -47,6 +50,7 @@ export const FAKE_RESPONSES = [
     question: 'How many government colleges are there in the Madurai district?',
     answer:
       'There are 3 government engineering colleges in the Madurai district.',
+      status: 'success',
     sources: [
       {
         name: 'Tamil Nadu Engineering College Dataset',
@@ -57,8 +61,9 @@ export const FAKE_RESPONSES = [
 ]
 
 const FALLBACK_RESPONSE = {
+  status: 'no-results',
   answer:
-    "That's outside the sample dataset for now — once the real API is connected, this will search the full college dataset.",
+    'No matching results were found in the current sample dataset. Try another college, district, or course.',
   sources: [],
 }
 
@@ -73,9 +78,10 @@ export function getFakeAnswer(question) {
   )
 
   return match
-    ? {
-        answer: match.answer,
-        sources: match.sources,
-      }
-    : FALLBACK_RESPONSE
+  ? {
+      status: match.status,
+      answer: match.answer,
+      sources: match.sources,
+    }
+  : FALLBACK_RESPONSE
 }
