@@ -1,22 +1,45 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Copy,
   Check,
   ThumbsUp,
-  ThumbsDown,
   Share,
   RotateCcw,
   MoreHorizontal,
-  X,
 } from 'lucide-react'
 
-export default function ResponseActions({ text, onRegenerate }) {
+export default function ResponseActions({
+  text,
+  onRegenerate,
+}) {
   const [copied, setCopied] = useState(false)
-  const [feedback, setFeedback] = useState(null)
+  const [liked, setLiked] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setShowMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener(
+        'mousedown',
+        handleClickOutside,
+      )
+    }
+  }, [])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text)
+
     setCopied(true)
 
     setTimeout(() => {
@@ -25,11 +48,7 @@ export default function ResponseActions({ text, onRegenerate }) {
   }
 
   const handleLike = () => {
-    setFeedback(feedback === 'like' ? null : 'like')
-  }
-
-  const handleDislike = () => {
-    setFeedback(feedback === 'dislike' ? null : 'dislike')
+    setLiked((prev) => !prev)
   }
 
   const handleShare = async () => {
@@ -43,12 +62,7 @@ export default function ResponseActions({ text, onRegenerate }) {
         // User cancelled sharing
       }
     } else {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-
-      setTimeout(() => {
-        setCopied(false)
-      }, 2000)
+      await handleCopy()
     }
   }
 
@@ -58,17 +72,12 @@ export default function ResponseActions({ text, onRegenerate }) {
     }
   }
 
-  const handleMenuCopy = async () => {
-    await handleCopy()
-    setShowMenu(false)
-  }
-
   return (
-    <div className="relative mt-3 flex items-center gap-3 text-ledger-ink/50">
+    <div className="mt-4 flex items-center gap-3 text-ledger-ink/50">
       <button
         type="button"
         onClick={handleCopy}
-        title="Copy"
+        title="Copy response"
         className="transition hover:text-ledger-brass"
       >
         {copied ? <Check size={18} /> : <Copy size={18} />}
@@ -77,9 +86,9 @@ export default function ResponseActions({ text, onRegenerate }) {
       <button
         type="button"
         onClick={handleLike}
-        title="Like"
+        title="Helpful"
         className={
-          feedback === 'like'
+          liked
             ? 'text-ledger-brass'
             : 'transition hover:text-ledger-brass'
         }
@@ -89,21 +98,8 @@ export default function ResponseActions({ text, onRegenerate }) {
 
       <button
         type="button"
-        onClick={handleDislike}
-        title="Dislike"
-        className={
-          feedback === 'dislike'
-            ? 'text-ledger-brass'
-            : 'transition hover:text-ledger-brass'
-        }
-      >
-        <ThumbsDown size={18} />
-      </button>
-
-      <button
-        type="button"
         onClick={handleShare}
-        title="Share"
+        title="Share response"
         className="transition hover:text-ledger-brass"
       >
         <Share size={18} />
@@ -112,43 +108,51 @@ export default function ResponseActions({ text, onRegenerate }) {
       <button
         type="button"
         onClick={handleRegenerate}
-        title="Regenerate"
+        title="Regenerate response"
         className="transition hover:text-ledger-brass"
       >
         <RotateCcw size={18} />
       </button>
 
-      <button
-        type="button"
-        onClick={() => setShowMenu(!showMenu)}
-        title="More options"
-        className="transition hover:text-ledger-brass"
+      <div
+        ref={menuRef}
+        className="relative"
       >
-        {showMenu ? <X size={18} /> : <MoreHorizontal size={18} />}
-      </button>
+        <button
+          type="button"
+          onClick={() => setShowMenu((prev) => !prev)}
+          title="More options"
+          className="transition hover:text-ledger-brass"
+        >
+          <MoreHorizontal size={18} />
+        </button>
 
-      {showMenu && (
-        <div className="absolute bottom-8 right-0 z-10 w-36 border border-ledger-rule bg-white py-1 text-sm text-ledger-ink shadow-lg">
-          <button
-            type="button"
-            onClick={handleMenuCopy}
-            className="w-full px-3 py-2 text-left hover:bg-ledger-paper"
-          >
-            Copy response
-          </button>
+        {showMenu && (
+          <div className="absolute left-0 top-full z-50 mt-2 w-40 rounded-lg border border-ledger-rule bg-white py-1 text-sm text-ledger-ink shadow-lg">
+            <button
+              type="button"
+              onClick={async () => {
+                await handleCopy()
+                setShowMenu(false)
+              }}
+              className="w-full px-3 py-2.5 text-left transition hover:bg-ledger-paper"
+            >
+              Copy response
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setShowMenu(false)
-              alert('Response saved!')
-            }}
-            className="w-full px-3 py-2 text-left hover:bg-ledger-paper"
-          >
-            Save response
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowMenu(false)
+                alert('Response saved!')
+              }}
+              className="w-full px-3 py-2.5 text-left transition hover:bg-ledger-paper"
+            >
+              Save response
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
