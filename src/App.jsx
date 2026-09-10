@@ -1,19 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Header from './components/Header.jsx'
-import Filters from './components/Filters.jsx'
 import MessageArea from './components/MessageArea.jsx'
 import InputBar from './components/InputBar.jsx'
 import { sendMessage } from './services/chatService.js'
 
-const defaultFilters = {
-  district: 'All Districts',
-  course: 'All Courses',
-  collegeType: 'All Types',
-}
-
 export default function App() {
   const [messages, setMessages] = useState([])
-  const [filters, setFilters] = useState(defaultFilters)
   const [isLoading, setIsLoading] = useState(false)
   const chatRef = useRef(null)
 
@@ -23,6 +15,7 @@ export default function App() {
     }
   }, [messages])
 
+  // Send a new question
   const handleSend = async (text) => {
     if (!text.trim() || isLoading) return
 
@@ -50,14 +43,42 @@ export default function App() {
     }
   }
 
+  // Regenerate an AI response
+  const handleRegenerate = async (messageIndex) => {
+    if (isLoading) return
+
+    const previousUserMessage = messages
+      .slice(0, messageIndex)
+      .reverse()
+      .find((message) => message.role === 'user')
+
+    if (!previousUserMessage) return
+
+    setIsLoading(true)
+
+    try {
+      const response = await sendMessage(previousUserMessage.text)
+
+      setMessages((prev) =>
+        prev.map((message, index) =>
+          index === messageIndex
+            ? {
+                ...message,
+                text: response.answer,
+                sources: response.sources,
+                status: response.status,
+              }
+            : message,
+        ),
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-ledger-paper">
       <Header />
-
-      <Filters
-        filters={filters}
-        onFilterChange={setFilters}
-      />
 
       <main
         ref={chatRef}
@@ -66,6 +87,7 @@ export default function App() {
         <MessageArea
           messages={messages}
           onQuestionClick={handleSend}
+          onRegenerate={handleRegenerate}
           isLoading={isLoading}
         />
       </main>

@@ -11,6 +11,7 @@ const suggestedQuestions = [
 export default function MessageArea({
   messages,
   onQuestionClick,
+  onRegenerate,
   isLoading,
 }) {
   const hasMessages = messages.length > 0
@@ -32,6 +33,7 @@ export default function MessageArea({
                 role={m.role}
                 text={m.text}
                 sources={m.sources}
+                onRegenerate={() => onRegenerate(i)}
               />
             ),
           )}

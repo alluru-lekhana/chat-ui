@@ -1,6 +1,12 @@
 import SourceReferences from './SourceReferences.jsx'
+import ResponseActions from './ResponseActions.jsx'
 
-export default function MessageBubble({ role, text, sources = [] }) {
+export default function MessageBubble({
+  role,
+  text,
+  sources = [],
+  onRegenerate,
+}) {
   const isUser = role === 'user'
 
   if (isUser) {
@@ -34,6 +40,11 @@ export default function MessageBubble({ role, text, sources = [] }) {
           </p>
 
           <SourceReferences sources={sources} />
+
+          <ResponseActions
+            text={text}
+            onRegenerate={onRegenerate}
+          />
         </div>
       </div>
     </div>
