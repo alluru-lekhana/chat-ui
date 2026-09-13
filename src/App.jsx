@@ -1,20 +1,20 @@
+import { supabase } from './services/supabase.js'
 import { useEffect, useRef, useState } from 'react'
 import Header from './components/Header.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import MessageArea from './components/MessageArea.jsx'
 import InputBar from './components/InputBar.jsx'
+import Login from './components/Login.jsx'
 import { sendMessage } from './services/chatService.js'
 
 export default function App() {
   const [messages, setMessages] = useState([])
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [user, setUser] = useState(null)
 
-  const [chats, setChats] = useState(() => {
-    const savedChats = localStorage.getItem('tn-college-chats')
-
-    return savedChats
-      ? JSON.parse(savedChats)
-      : []
-  })
+  // CHATS
+  const [chats, setChats] = useState([])
 
   const [activeChatId, setActiveChatId] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -22,12 +22,64 @@ export default function App() {
 
   const chatRef = useRef(null)
 
+  // CHECK IF USER IS ALREADY LOGGED IN
   useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser()
+
+      if (data.user) {
+        setUser(data.user)
+        setIsLoggedIn(true)
+      }
+
+      setAuthLoading(false)
+    }
+
+    checkUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session) {
+          setUser(session.user)
+          setIsLoggedIn(true)
+        } else {
+          setUser(null)
+          setIsLoggedIn(false)
+        }
+      },
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // LOAD CHATS FOR THE LOGGED-IN USER ONLY
+  useEffect(() => {
+    if (!user) return
+
+    const savedChats = localStorage.getItem(
+      `tn-college-chats-${user.id}`,
+    )
+
+    const userChats = savedChats
+      ? JSON.parse(savedChats)
+      : []
+
+    setChats(userChats)
+    setMessages([])
+    setActiveChatId(null)
+  }, [user])
+
+  // SAVE CHATS FOR THE LOGGED-IN USER ONLY
+  useEffect(() => {
+    if (!user) return
+
     localStorage.setItem(
-      'tn-college-chats',
+      `tn-college-chats-${user.id}`,
       JSON.stringify(chats),
     )
-  }, [chats])
+  }, [chats, user])
 
   useEffect(() => {
     if (chatRef.current) {
@@ -119,9 +171,7 @@ export default function App() {
     }
   }
 
-  const handleRegenerate = async (
-    messageIndex,
-  ) => {
+  const handleRegenerate = async (messageIndex) => {
     if (isLoading) return
 
     const previousUserMessage = messages
@@ -221,10 +271,41 @@ export default function App() {
     )
   }
 
+  // REAL SUPABASE SIGN OUT
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+
+    setUser(null)
+    setIsLoggedIn(false)
+
+    // CLEAR CURRENT USER'S CHATS FROM SCREEN
+    setChats([])
+    setMessages([])
+    setActiveChatId(null)
+  }
+
+  // WAIT WHILE CHECKING SESSION
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ledger-paper">
+        <p className="font-serif text-ledger-ink">
+          Loading...
+        </p>
+      </div>
+    )
+  }
+
+  // SHOW LOGIN PAGE
+  if (!isLoggedIn) {
+    return <Login />
+  }
+
+  // SHOW MAIN APP
   return (
     <div className="flex h-screen overflow-hidden bg-ledger-paper">
 
       <Sidebar
+        user={user}
         chats={chats}
         activeChatId={activeChatId}
         sidebarOpen={sidebarOpen}
@@ -235,6 +316,7 @@ export default function App() {
         onPinChat={handlePinChat}
         onOpen={() => setSidebarOpen(true)}
         onClose={() => setSidebarOpen(false)}
+        onSignOut={handleSignOut}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -245,14 +327,12 @@ export default function App() {
           ref={chatRef}
           className="min-h-0 flex-1 overflow-y-auto"
         >
-
           <MessageArea
             messages={messages}
             onQuestionClick={handleSend}
             onRegenerate={handleRegenerate}
             isLoading={isLoading}
           />
-
         </main>
 
         <InputBar

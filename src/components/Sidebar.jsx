@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Bot,
   Plus,
@@ -15,9 +15,14 @@ import {
   X,
   MapPin,
   GraduationCap,
+  Settings,
+  LogOut,
+  Shield,
+  Download,
 } from 'lucide-react'
 
 export default function Sidebar({
+  user,
   chats,
   activeChatId,
   sidebarOpen,
@@ -28,6 +33,7 @@ export default function Sidebar({
   onPinChat,
   onOpen,
   onClose,
+  onSignOut,
 }) {
   const [activeSection, setActiveSection] = useState('chats')
   const [openMenuId, setOpenMenuId] = useState(null)
@@ -35,6 +41,29 @@ export default function Sidebar({
   const [newTitle, setNewTitle] = useState('')
   const [searchText, setSearchText] = useState('')
   const [showProfile, setShowProfile] = useState(false)
+  const menuRef = useRef(null)
+  useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (
+      menuRef.current &&
+      !menuRef.current.contains(event.target)
+    ) {
+      setOpenMenuId(null)
+    }
+  }
+
+  document.addEventListener(
+    'mousedown',
+    handleClickOutside,
+  )
+
+  return () => {
+    document.removeEventListener(
+      'mousedown',
+      handleClickOutside,
+    )
+  }
+}, [])
 
   const startRename = (chat) => {
     setEditingChatId(chat.id)
@@ -56,29 +85,32 @@ export default function Sidebar({
     onOpen()
   }
 
- const filteredChats = chats.filter((chat) => {
-  const query = searchText.trim().toLowerCase()
+  const filteredChats = chats.filter((chat) => {
+    const query = searchText.trim().toLowerCase()
 
-  if (!query) return true
+    if (!query) return true
 
-  // Search chat title
-  if (chat.title?.toLowerCase().includes(query)) {
-    return true
-  }
+    if (chat.title?.toLowerCase().includes(query)) {
+      return true
+    }
 
-  // Search all messages inside the chat
-  return chat.messages?.some((message) =>
-    message.text?.toLowerCase().includes(query),
-  )
-})
+    return chat.messages?.some((message) =>
+      message.text?.toLowerCase().includes(query),
+    )
+  })
 
   const pinnedChats = chats.filter((chat) => chat.pinned)
 
   const renderChat = (chat) => {
     return (
       <div
-        key={chat.id}
-        className={`group relative flex items-center rounded-lg ${
+  key={chat.id}
+  ref={
+    openMenuId === chat.id
+      ? menuRef
+      : null
+  }
+  className={`group relative flex items-center rounded-lg ${
           activeChatId === chat.id
             ? 'bg-white/30'
             : 'hover:bg-white/20'
@@ -261,8 +293,9 @@ export default function Sidebar({
 
         {showProfile && (
           <ProfileModal
-            chats={chats}
+            user={user}
             onClose={() => setShowProfile(false)}
+             onSignOut={onSignOut}
           />
         )}
       </>
@@ -272,8 +305,6 @@ export default function Sidebar({
   return (
     <>
       <aside className="flex h-screen w-72 shrink-0 flex-col border-r border-ledger-rule bg-ledger-paper">
-
-        {/* HEADER */}
 
         <div className="flex items-center justify-between border-b border-ledger-rule px-5 py-5">
 
@@ -298,8 +329,6 @@ export default function Sidebar({
 
         </div>
 
-        {/* NEW CHAT */}
-
         <div className="p-4">
 
           <button
@@ -312,8 +341,6 @@ export default function Sidebar({
           </button>
 
         </div>
-
-        {/* TABS */}
 
         <div className="flex border-b border-ledger-rule px-3">
 
@@ -354,8 +381,6 @@ export default function Sidebar({
           </button>
 
         </div>
-
-        {/* CONTENT */}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
 
@@ -497,8 +522,6 @@ export default function Sidebar({
 
         </div>
 
-        {/* PROFILE */}
-
         <div className="border-t border-ledger-rule p-4">
 
           <button
@@ -531,24 +554,170 @@ export default function Sidebar({
 
       {showProfile && (
         <ProfileModal
-          chats={chats}
+          user={user}
           onClose={() => setShowProfile(false)}
+          onSignOut={onSignOut}
         />
       )}
     </>
   )
 }
 
-function ProfileModal({ chats, onClose }) {
+function ProfileModal({
+  user,
+  onClose,
+  onSignOut,
+}) {
+  const [showAccountSettings, setShowAccountSettings] =
+    useState(false)
+
+  const handleSignOut = () => {
+    onClose()
+    onSignOut()
+  }
+
+  const fullName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    'Your Profile'
+
+  const email = user?.email || ''
+
+  const avatar =
+    user?.user_metadata?.avatar_url ||
+    user?.user_metadata?.picture
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 px-4">
+    <>
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 px-4"
+        onClick={onClose}
+      >
 
-      <div className="w-full max-w-sm rounded-xl border border-ledger-rule bg-ledger-paper shadow-xl">
+        <div
+          className="w-full max-w-sm rounded-xl border border-ledger-rule bg-ledger-paper shadow-xl"
+          onClick={(event) =>
+            event.stopPropagation()
+          }
+        >
 
+          <div className="flex items-center justify-between border-b border-ledger-rule px-5 py-4">
+
+            <h2 className="font-serif text-lg text-ledger-ink">
+              Your Profile
+            </h2>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-1 text-ledger-ink/50 hover:bg-white/30 hover:text-ledger-ink"
+            >
+              <X size={20} />
+            </button>
+
+          </div>
+
+          <div className="p-6 text-center">
+
+            <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-ledger-rule">
+
+              {avatar ? (
+                <img
+                  src={avatar}
+                  alt={fullName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User
+                  size={28}
+                  className="text-ledger-ink"
+                />
+              )}
+
+            </div>
+
+            <h3 className="mt-4 font-serif text-xl text-ledger-ink">
+              {fullName}
+            </h3>
+
+            <p className="mt-1 text-sm text-ledger-ink/40">
+              {email}
+            </p>
+
+          </div>
+
+          <div className="border-t border-ledger-rule p-4">
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowAccountSettings(true)
+              }
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-ledger-ink transition hover:bg-white/30"
+            >
+              <Settings size={18} />
+              Account Settings
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-red-500 transition hover:bg-white/30"
+            >
+              <LogOut size={18} />
+              Sign Out
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {showAccountSettings && (
+        <AccountSettingsModal
+          user={user}
+          onClose={() =>
+            setShowAccountSettings(false)
+          }
+        />
+      )}
+    </>
+  )
+}
+function AccountSettingsModal({
+  user,
+  onClose,
+}) {
+  const fullName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    'Your Profile'
+
+  const email = user?.email || ''
+
+  const avatar =
+    user?.user_metadata?.avatar_url ||
+    user?.user_metadata?.picture
+
+  return (
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/30 px-4"
+      onClick={onClose}
+    >
+
+      <div
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl border border-ledger-rule bg-ledger-paper shadow-xl"
+        onClick={(event) =>
+          event.stopPropagation()
+        }
+      >
+
+        {/* HEADER */}
         <div className="flex items-center justify-between border-b border-ledger-rule px-5 py-4">
 
-          <h2 className="font-serif text-lg text-ledger-ink">
-            Your Profile
+          <h2 className="font-serif text-xl text-ledger-ink">
+            Account Settings
           </h2>
 
           <button
@@ -561,38 +730,182 @@ function ProfileModal({ chats, onClose }) {
 
         </div>
 
-        <div className="p-6 text-center">
+        <div className="p-5">
 
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-ledger-rule">
-            <User
-              size={28}
-              className="text-ledger-ink"
-            />
-          </div>
+          {/* ACCOUNT */}
+          <section className="mb-7">
 
-          <h3 className="mt-4 font-serif text-xl text-ledger-ink">
-            Your Profile
-          </h3>
+            <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-ledger-ink/40">
+              Account
+            </p>
 
-          <p className="mt-1 text-sm text-ledger-ink/40">
-            TN Colleges Assistant
-          </p>
+            <div className="rounded-lg border border-ledger-rule p-4">
 
-          <div className="mt-6 border-t border-ledger-rule pt-4">
+              <div className="flex items-center gap-4">
 
-            <div className="flex justify-between">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-ledger-rule">
 
-              <span className="text-sm text-ledger-ink/50">
-                Total Chats
-              </span>
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt={fullName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User
+                      size={22}
+                      className="text-ledger-ink"
+                    />
+                  )}
 
-              <span className="font-semibold text-ledger-ink">
-                {chats.length}
-              </span>
+                </div>
+
+                <div className="min-w-0">
+
+                  <p className="truncate text-sm font-medium text-ledger-ink">
+                    {fullName}
+                  </p>
+
+                  <p className="mt-1 truncate text-xs text-ledger-ink/50">
+                    {email}
+                  </p>
+
+                  <p className="mt-2 text-xs text-ledger-ink/40">
+                    Signed in with Google
+                  </p>
+
+                </div>
+
+              </div>
 
             </div>
 
-          </div>
+          </section>
+
+
+          {/* CHAT & DATA */}
+          <section className="mb-7">
+
+            <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-ledger-ink/40">
+              Chat & Data
+            </p>
+
+            <div className="overflow-hidden rounded-lg border border-ledger-rule">
+
+              <button
+                type="button"
+                className="flex w-full items-center justify-between border-b border-ledger-rule px-4 py-4 text-left transition hover:bg-white/30"
+              >
+
+                <div>
+
+                  <p className="text-sm text-ledger-ink">
+                    Clear All Chat History
+                  </p>
+
+                  <p className="mt-1 text-xs text-ledger-ink/45">
+                    Permanently delete all your chats
+                  </p>
+
+                </div>
+
+                <Trash2
+                  size={18}
+                  className="text-red-500"
+                />
+
+              </button>
+
+
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-4 py-4 text-left transition hover:bg-white/30"
+              >
+
+                <div>
+
+                  <p className="text-sm text-ledger-ink">
+                    Export Chat History
+                  </p>
+
+                  <p className="mt-1 text-xs text-ledger-ink/45">
+                    Download a copy of your chats
+                  </p>
+
+                </div>
+
+                <Download
+                  size={18}
+                  className="text-ledger-brass"
+                />
+
+              </button>
+
+            </div>
+
+          </section>
+
+
+          {/* PRIVACY & SECURITY */}
+          <section>
+
+            <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-ledger-ink/40">
+              Privacy & Security
+            </p>
+
+            <div className="mb-4 rounded-lg border border-ledger-rule p-4">
+
+              <div className="flex items-start gap-3">
+
+                <Shield
+                  size={19}
+                  className="mt-0.5 shrink-0 text-ledger-brass"
+                />
+
+                <div>
+
+                  <p className="text-sm text-ledger-ink">
+                    Your chats are private
+                  </p>
+
+                  <p className="mt-1 text-xs leading-relaxed text-ledger-ink/50">
+                    Your chat history is securely linked
+                    to your account. Other users cannot
+                    access your chats.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-lg border border-red-200 px-4 py-4 text-left transition hover:bg-red-50"
+            >
+
+              <div>
+
+                <p className="text-sm text-red-500">
+                  Delete Account
+                </p>
+
+                <p className="mt-1 text-xs text-ledger-ink/45">
+                  Permanently delete your account and data
+                </p>
+
+              </div>
+
+              <Trash2
+                size={18}
+                className="text-red-500"
+              />
+
+            </button>
+
+          </section>
 
         </div>
 
