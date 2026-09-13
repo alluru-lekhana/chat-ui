@@ -1,26 +1,39 @@
-# TN Colleges — Chat UI
+# TN Colleges — AI Chat Assistant
 
-React chat interface for the TN Colleges RAG project. Frontend only — no backend calls yet.
+An AI-powered chat application for exploring Tamil Nadu engineering colleges.
+
+The application allows users to ask questions about colleges and receive AI-generated responses through the TN Colleges RAG system.
+
+## Features
+
+- AI-powered college assistant
+- Ask questions about Tamil Nadu engineering colleges
+- Suggested questions
+- Chat history
+- Search chat history
+- Rename chats
+- Delete chats
+- Pin chats
+- Regenerate AI responses
+- Google Sign-In
+- User profile
+- Account Settings
+- User-specific chat history
+- Secure chat storage with Supabase
+
+## Tech Stack
+
+- React
+- Vite
+- Tailwind CSS
+- Supabase
+- Lucide React
+- React Icons
 
 ## Setup
 
-\`\`\`bash
-npm install
-npm run dev
-\`\`\`
+### 1. Clone the repository
 
-Then open the local URL Vite prints (usually http://localhost:5173).
-
-## Progress
-
-- **Day 1** — layout shell: `App.jsx` (full-height layout), `Header.jsx`, `MessageArea.jsx`, `InputBar.jsx`
-- **Day 2** — `MessageBubble.jsx` component, two styles: user messages (right-aligned "Query") and AI answers (left-aligned "Entry")
-- **Day 3** — wired `useState` in `App.jsx`: typing a question and hitting Ask appends it to a messages array, `MessageArea` renders whatever's actually sent, input clears after send
-- **Day 4** — `data/fakeResponses.js` holds hardcoded Q&A pairs matching the sample questions; after sending, a fake AI answer appears ~900ms later (that delay is what Day 8's loading indicator will cover)
-- **Day 5** — improved the responsive layout and chat experience: enhanced the empty/welcome state with clickable suggested questions, added validation to prevent empty messages, implemented manual scrolling for the chat area, and added auto-scroll to keep the latest user messages and AI responses visible
-
-Checked on a 375px-wide viewport as well as desktop widths.
-
-## Next up (per the 4-week schedule)
-
-- Day 5: responsive polish, empty state refinement, commit
+```bash
+git clone <your-repository-url>
+cd chat-ui
