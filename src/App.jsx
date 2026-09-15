@@ -7,13 +7,15 @@ import InputBar from './components/InputBar.jsx'
 import Login from './components/Login.jsx'
 import { sendMessage } from './services/chatService.js'
 
+
 export default function App() {
   const [messages, setMessages] = useState([])
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
   const [user, setUser] = useState(null)
+  
 
-  // CHATS
+  // CHATS - stored in Supabase, not localStorage
   const [chats, setChats] = useState([])
 
   const [activeChatId, setActiveChatId] = useState(null)
@@ -21,6 +23,10 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const chatRef = useRef(null)
+  const getChatIdFromUrl = () => {
+  const params = new URLSearchParams(window.location.search)
+  return params.get('chat')
+}
 
   // CHECK IF USER IS ALREADY LOGGED IN
   useEffect(() => {
@@ -47,6 +53,9 @@ export default function App() {
         } else {
           setUser(null)
           setIsLoggedIn(false)
+          setChats([])
+          setMessages([])
+          setActiveChatId(null)
         }
       },
     )
@@ -54,32 +63,46 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // LOAD CHATS FOR THE LOGGED-IN USER ONLY
-  useEffect(() => {
-    if (!user) return
+  // LOAD CHATS FROM SUPABASE FOR THE LOGGED-IN USER ONLY
+  // LOAD CHATS FROM SUPABASE FOR THE LOGGED-IN USER ONLY
+useEffect(() => {
+  if (!user) return
 
-    const savedChats = localStorage.getItem(
-      `tn-college-chats-${user.id}`,
-    )
+  const loadChats = async () => {
+    const { data, error } = await supabase
+      .from('chats')
+      .select('id, user_id, title, messages, pinned, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
 
-    const userChats = savedChats
-      ? JSON.parse(savedChats)
-      : []
+    if (error) {
+      console.error('Failed to load chats:', error)
+      setChats([])
+      return
+    }
 
-    setChats(userChats)
-    setMessages([])
-    setActiveChatId(null)
-  }, [user])
+    const loadedChats = data || []
 
-  // SAVE CHATS FOR THE LOGGED-IN USER ONLY
-  useEffect(() => {
-    if (!user) return
+    setChats(loadedChats)
 
-    localStorage.setItem(
-      `tn-college-chats-${user.id}`,
-      JSON.stringify(chats),
-    )
-  }, [chats, user])
+    // Restore the chat that was active before
+    const chatIdFromUrl = getChatIdFromUrl()
+
+    if (chatIdFromUrl) {
+      const activeChat = loadedChats.find(
+        (chat) =>
+          String(chat.id) === String(chatIdFromUrl),
+      )
+
+      if (activeChat) {
+        setActiveChatId(activeChat.id)
+        setMessages(activeChat.messages || [])
+      }
+    }
+  }
+
+  loadChats()
+}, [user?.id])
 
   useEffect(() => {
     if (chatRef.current) {
@@ -88,7 +111,7 @@ export default function App() {
     }
   }, [messages])
 
-  const updateChatMessages = (
+  const updateChatMessages = async (
     chatId,
     updatedMessages,
   ) => {
@@ -102,77 +125,97 @@ export default function App() {
           : chat,
       ),
     )
+
+    const { error } = await supabase
+      .from('chats')
+      .update({ messages: updatedMessages })
+      .eq('id', chatId)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Failed to save messages:', error)
+    }
   }
 
   const handleSend = async (text) => {
-    if (!text.trim() || isLoading) return
+  if (!text.trim() || isLoading || !user) return
 
-    let chatId = activeChatId
+  let chatId = activeChatId
 
-    const userMessage = {
-      role: 'user',
-      text,
-    }
+  const userMessage = {
+    role: 'user',
+    text,
+  }
 
-    const updatedMessages = [
-      ...messages,
-      userMessage,
-    ]
+  const updatedMessages = [
+    ...messages,
+    userMessage,
+  ]
 
-    if (!chatId) {
-      const newChat = {
-        id: Date.now(),
+  if (!chatId) {
+    const { data: newChat, error } = await supabase
+      .from('chats')
+      .insert({
+        user_id: user.id,
         title: text.slice(0, 40),
         messages: updatedMessages,
         pinned: false,
-      }
+      })
+      .select()
+      .single()
 
-      chatId = newChat.id
-
-      setChats((prev) => [
-        newChat,
-        ...prev,
-      ])
-
-      setActiveChatId(chatId)
-    } else {
-      updateChatMessages(
-        chatId,
-        updatedMessages,
-      )
+    if (error) {
+      console.error('Failed to create chat:', error)
+      return
     }
 
-    setMessages(updatedMessages)
-    setIsLoading(true)
+    chatId = newChat.id
 
-    try {
-      const response = await sendMessage(text)
+    setChats((prev) => [
+      newChat,
+      ...prev,
+    ])
 
-      const assistantMessage = {
-        role: 'assistant',
-        text: response.answer,
-        sources: response.sources,
-        status: response.status,
-      }
+    setActiveChatId(chatId)
 
-      const finalMessages = [
-        ...updatedMessages,
-        assistantMessage,
-      ]
-
-      setMessages(finalMessages)
-
-      updateChatMessages(
-        chatId,
-        finalMessages,
-      )
-    } finally {
-      setIsLoading(false)
-    }
+    window.history.replaceState(
+      {},
+      '',
+      `?chat=${chatId}`,
+    )
   }
 
+  setMessages(updatedMessages)
+  setIsLoading(true)
+
+  try {
+    const response = await sendMessage(text)
+
+    const assistantMessage = {
+      role: 'assistant',
+      text: response.answer,
+      sources: response.sources,
+      status: response.status,
+    }
+
+    const finalMessages = [
+      ...updatedMessages,
+      assistantMessage,
+    ]
+
+    setMessages(finalMessages)
+
+    await updateChatMessages(
+      chatId,
+      finalMessages,
+    )
+  } finally {
+    setIsLoading(false)
+  }
+}
+
   const handleRegenerate = async (messageIndex) => {
-    if (isLoading) return
+    if (isLoading || !user) return
 
     const previousUserMessage = messages
       .slice(0, messageIndex)
@@ -206,7 +249,7 @@ export default function App() {
       setMessages(updatedMessages)
 
       if (activeChatId) {
-        updateChatMessages(
+        await updateChatMessages(
           activeChatId,
           updatedMessages,
         )
@@ -216,22 +259,31 @@ export default function App() {
     }
   }
 
-  const handleNewChat = () => {
-    setMessages([])
-    setActiveChatId(null)
-    setIsLoading(false)
-  }
-
   const handleSelectChat = (chat) => {
-    setMessages(chat.messages || [])
-    setActiveChatId(chat.id)
-  }
+  setActiveChatId(chat.id)
+  setMessages(chat.messages || [])
+  setIsLoading(false)
 
-  const handleRenameChat = (
+  window.history.replaceState(
+    {},
+    '',
+    `?chat=${chat.id}`,
+  )
+}
+
+ const handleNewChat = () => {
+  setMessages([])
+  setActiveChatId(null)
+  setIsLoading(false)
+
+  window.history.replaceState({}, '', window.location.pathname)
+}
+
+  const handleRenameChat = async (
     chatId,
     newTitle,
   ) => {
-    if (!newTitle.trim()) return
+    if (!newTitle.trim() || !user) return
 
     setChats((prev) =>
       prev.map((chat) =>
@@ -243,9 +295,21 @@ export default function App() {
           : chat,
       ),
     )
+
+    const { error } = await supabase
+      .from('chats')
+      .update({ title: newTitle })
+      .eq('id', chatId)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Failed to rename chat:', error)
+    }
   }
 
-  const handleDeleteChat = (chatId) => {
+  const handleDeleteChat = async (chatId) => {
+    if (!user) return
+
     setChats((prev) =>
       prev.filter(
         (chat) => chat.id !== chatId,
@@ -256,19 +320,49 @@ export default function App() {
       setMessages([])
       setActiveChatId(null)
     }
+
+    const { error } = await supabase
+      .from('chats')
+      .delete()
+      .eq('id', chatId)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Failed to delete chat:', error)
+    }
   }
 
-  const handlePinChat = (chatId) => {
+  const handlePinChat = async (chatId) => {
+    if (!user) return
+
+    const chat = chats.find(
+      (item) => item.id === chatId,
+    )
+
+    if (!chat) return
+
+    const nextPinned = !chat.pinned
+
     setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
+      prev.map((item) =>
+        item.id === chatId
           ? {
-              ...chat,
-              pinned: !chat.pinned,
+              ...item,
+              pinned: nextPinned,
             }
-          : chat,
+          : item,
       ),
     )
+
+    const { error } = await supabase
+      .from('chats')
+      .update({ pinned: nextPinned })
+      .eq('id', chatId)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Failed to update pinned state:', error)
+    }
   }
 
   // REAL SUPABASE SIGN OUT
@@ -277,8 +371,6 @@ export default function App() {
 
     setUser(null)
     setIsLoggedIn(false)
-
-    // CLEAR CURRENT USER'S CHATS FROM SCREEN
     setChats([])
     setMessages([])
     setActiveChatId(null)
@@ -303,7 +395,6 @@ export default function App() {
   // SHOW MAIN APP
   return (
     <div className="flex h-screen overflow-hidden bg-ledger-paper">
-
       <Sidebar
         user={user}
         chats={chats}
@@ -320,7 +411,6 @@ export default function App() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-
         <Header />
 
         <main
@@ -339,9 +429,7 @@ export default function App() {
           onSend={handleSend}
           isLoading={isLoading}
         />
-
       </div>
-
     </div>
   )
 }
