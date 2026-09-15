@@ -1,10 +1,10 @@
-TN Colleges — AI Chat Assistant
+##TN Colleges — AI Chat Assistant
 
 An AI-powered chat application for exploring Tamil Nadu engineering colleges.
 
 The application allows users to ask questions about colleges and receive AI-generated responses through the TN Colleges RAG system.
 
-Features
+##Features
 
 AI-powered college assistant
 
