@@ -293,15 +293,25 @@ export default function Sidebar({
 
         </aside>
 
-        <ProfileModal
-  user={user}
-  onClose={() => setShowProfile(false)}
-  onOpenAccountSettings={() => {
-    setShowProfile(false)
-    setShowAccountSettings(true)
-  }}
-  onSignOut={onSignOut}
-/>
+        {showProfile && (
+  <ProfileModal
+    user={user}
+    onClose={() => setShowProfile(false)}
+    onOpenAccountSettings={() => {
+      setShowProfile(false)
+      setShowAccountSettings(true)
+    }}
+    onSignOut={onSignOut}
+  />
+)}
+
+{showAccountSettings && (
+  <AccountSettingsModal
+    user={user}
+    onClose={() => setShowAccountSettings(false)}
+    onSignOut={onSignOut}
+  />
+)}
       </>
     )
   }
