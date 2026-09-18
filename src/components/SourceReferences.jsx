@@ -14,12 +14,24 @@ export default function SourceReferences({ sources = [] }) {
             className="rounded border border-ledger-rule bg-white/40 px-3 py-2"
           >
             <p className="font-serif text-sm text-ledger-ink">
-              {source.name}
+              {source.college_name || 'College'}
             </p>
 
-            {source.detail && (
-              <p className="mt-1 font-mono text-xs text-ledger-ink/50">
-                {source.detail}
+            <p className="mt-1 font-mono text-xs text-ledger-ink/50">
+              {source.tnea_code && (
+                <>TNEA Code: {source.tnea_code}</>
+              )}
+
+              {source.tnea_code && source.district && ' • '}
+
+              {source.district && (
+                <>District: {source.district}</>
+              )}
+            </p>
+
+            {typeof source.score === 'number' && (
+              <p className="mt-1 font-mono text-[11px] text-ledger-ink/40">
+                Relevance: {(source.score * 100).toFixed(1)}%
               </p>
             )}
           </div>

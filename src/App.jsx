@@ -5,8 +5,10 @@ import Sidebar from './components/Sidebar.jsx'
 import MessageArea from './components/MessageArea.jsx'
 import InputBar from './components/InputBar.jsx'
 import Login from './components/Login.jsx'
-import { sendMessage } from './services/chatService.js'
-
+import {
+  sendMessage,
+  streamMessage,
+} from './services/chatService.js'
 
 export default function App() {
   const [messages, setMessages] = useState([])
@@ -188,19 +190,93 @@ useEffect(() => {
   setMessages(updatedMessages)
   setIsLoading(true)
 
-  try {
-    const response = await sendMessage(text)
+  let streamedAnswer = ''
+  let streamedSources = []
+  let streamError = null
 
-    const assistantMessage = {
-      role: 'assistant',
-      text: response.answer,
-      sources: response.sources,
-      status: response.status,
-    }
+  try {
+    await streamMessage(text, {
+      onToken: (token) => {
+        streamedAnswer += token
+
+        const assistantMessage = {
+          role: 'assistant',
+          text: streamedAnswer,
+          sources: streamedSources,
+          status: 'streaming',
+        }
+
+        setMessages([
+          ...updatedMessages,
+          assistantMessage,
+        ])
+      },
+
+      onSources: (sources) => {
+        streamedSources = sources || []
+
+        const assistantMessage = {
+          role: 'assistant',
+          text: streamedAnswer,
+          sources: streamedSources,
+          status: 'streaming',
+        }
+
+        setMessages([
+          ...updatedMessages,
+          assistantMessage,
+        ])
+      },
+
+      onError: (error) => {
+        streamError = error
+      },
+
+      onDone: () => {
+        // Final save happens after streamMessage completes.
+      },
+    })
+
+    const assistantMessage = streamError
+      ? {
+          role: 'assistant',
+          text:
+            streamError.message ||
+            'Unable to get a response from the counselor.',
+          sources: [],
+          status: 'error',
+        }
+      : {
+          role: 'assistant',
+          text: streamedAnswer,
+          sources: streamedSources,
+          status: 'success',
+        }
 
     const finalMessages = [
       ...updatedMessages,
       assistantMessage,
+    ]
+
+    setMessages(finalMessages)
+
+    await updateChatMessages(
+      chatId,
+      finalMessages,
+    )
+  } catch (error) {
+    console.error('Streaming error:', error)
+
+    const errorMessage = {
+      role: 'assistant',
+      text: 'Unable to get a response from the counselor. Please try again.',
+      sources: [],
+      status: 'error',
+    }
+
+    const finalMessages = [
+      ...updatedMessages,
+      errorMessage,
     ]
 
     setMessages(finalMessages)
