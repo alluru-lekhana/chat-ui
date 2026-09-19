@@ -5,30 +5,26 @@ import Sidebar from './components/Sidebar.jsx'
 import MessageArea from './components/MessageArea.jsx'
 import InputBar from './components/InputBar.jsx'
 import Login from './components/Login.jsx'
-import {
-  sendMessage,
-  streamMessage,
-} from './services/chatService.js'
+import { sendMessage } from './services/chatService'
 
 export default function App() {
   const [messages, setMessages] = useState([])
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
   const [user, setUser] = useState(null)
-  
 
   // CHATS - stored in Supabase, not localStorage
   const [chats, setChats] = useState([])
-
   const [activeChatId, setActiveChatId] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const chatRef = useRef(null)
+
   const getChatIdFromUrl = () => {
-  const params = new URLSearchParams(window.location.search)
-  return params.get('chat')
-}
+    const params = new URLSearchParams(window.location.search)
+    return params.get('chat')
+  }
 
   // CHECK IF USER IS ALREADY LOGGED IN
   useEffect(() => {
@@ -66,45 +62,46 @@ export default function App() {
   }, [])
 
   // LOAD CHATS FROM SUPABASE FOR THE LOGGED-IN USER ONLY
-  // LOAD CHATS FROM SUPABASE FOR THE LOGGED-IN USER ONLY
-useEffect(() => {
-  if (!user) return
+  useEffect(() => {
+    if (!user) return
 
-  const loadChats = async () => {
-    const { data, error } = await supabase
-      .from('chats')
-      .select('id, user_id, title, messages, pinned, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    const loadChats = async () => {
+      const { data, error } = await supabase
+        .from('chats')
+        .select(
+          'id, user_id, title, messages, pinned, created_at',
+        )
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Failed to load chats:', error)
-      setChats([])
-      return
-    }
+      if (error) {
+        console.error('Failed to load chats:', error)
+        setChats([])
+        return
+      }
 
-    const loadedChats = data || []
+      const loadedChats = data || []
 
-    setChats(loadedChats)
+      setChats(loadedChats)
 
-    // Restore the chat that was active before
-    const chatIdFromUrl = getChatIdFromUrl()
+      // Restore the chat that was active before
+      const chatIdFromUrl = getChatIdFromUrl()
 
-    if (chatIdFromUrl) {
-      const activeChat = loadedChats.find(
-        (chat) =>
-          String(chat.id) === String(chatIdFromUrl),
-      )
+      if (chatIdFromUrl) {
+        const activeChat = loadedChats.find(
+          (chat) =>
+            String(chat.id) === String(chatIdFromUrl),
+        )
 
-      if (activeChat) {
-        setActiveChatId(activeChat.id)
-        setMessages(activeChat.messages || [])
+        if (activeChat) {
+          setActiveChatId(activeChat.id)
+          setMessages(activeChat.messages || [])
+        }
       }
     }
-  }
 
-  loadChats()
-}, [user?.id])
+    loadChats()
+  }, [user?.id])
 
   useEffect(() => {
     if (chatRef.current) {
@@ -140,155 +137,104 @@ useEffect(() => {
   }
 
   const handleSend = async (text) => {
-  if (!text.trim() || isLoading || !user) return
+    if (!text.trim() || isLoading || !user) return
 
-  let chatId = activeChatId
+    let chatId = activeChatId
 
-  const userMessage = {
-    role: 'user',
-    text,
-  }
-
-  const updatedMessages = [
-    ...messages,
-    userMessage,
-  ]
-
-  if (!chatId) {
-    const { data: newChat, error } = await supabase
-      .from('chats')
-      .insert({
-        user_id: user.id,
-        title: text.slice(0, 40),
-        messages: updatedMessages,
-        pinned: false,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Failed to create chat:', error)
-      return
+    const userMessage = {
+      role: 'user',
+      text,
     }
 
-    chatId = newChat.id
-
-    setChats((prev) => [
-      newChat,
-      ...prev,
-    ])
-
-    setActiveChatId(chatId)
-
-    window.history.replaceState(
-      {},
-      '',
-      `?chat=${chatId}`,
-    )
-  }
-
-  setMessages(updatedMessages)
-  setIsLoading(true)
-
-  let streamedAnswer = ''
-  let streamedSources = []
-  let streamError = null
-
-  try {
-    await streamMessage(text, {
-      onToken: (token) => {
-        streamedAnswer += token
-
-        const assistantMessage = {
-          role: 'assistant',
-          text: streamedAnswer,
-          sources: streamedSources,
-          status: 'streaming',
-        }
-
-        setMessages([
-          ...updatedMessages,
-          assistantMessage,
-        ])
-      },
-
-      onSources: (sources) => {
-        streamedSources = sources || []
-
-        const assistantMessage = {
-          role: 'assistant',
-          text: streamedAnswer,
-          sources: streamedSources,
-          status: 'streaming',
-        }
-
-        setMessages([
-          ...updatedMessages,
-          assistantMessage,
-        ])
-      },
-
-      onError: (error) => {
-        streamError = error
-      },
-
-      onDone: () => {
-        // Final save happens after streamMessage completes.
-      },
-    })
-
-    const assistantMessage = streamError
-      ? {
-          role: 'assistant',
-          text:
-            streamError.message ||
-            'Unable to get a response from the counselor.',
-          sources: [],
-          status: 'error',
-        }
-      : {
-          role: 'assistant',
-          text: streamedAnswer,
-          sources: streamedSources,
-          status: 'success',
-        }
-
-    const finalMessages = [
-      ...updatedMessages,
-      assistantMessage,
+    const updatedMessages = [
+      ...messages,
+      userMessage,
     ]
 
-    setMessages(finalMessages)
+    if (!chatId) {
+      const { data: newChat, error } = await supabase
+        .from('chats')
+        .insert({
+          user_id: user.id,
+          title: text.slice(0, 40),
+          messages: updatedMessages,
+          pinned: false,
+        })
+        .select()
+        .single()
 
-    await updateChatMessages(
-      chatId,
-      finalMessages,
-    )
-  } catch (error) {
-    console.error('Streaming error:', error)
+      if (error) {
+        console.error('Failed to create chat:', error)
+        return
+      }
 
-    const errorMessage = {
-      role: 'assistant',
-      text: 'Unable to get a response from the counselor. Please try again.',
-      sources: [],
-      status: 'error',
+      chatId = newChat.id
+
+      setChats((prev) => [
+        newChat,
+        ...prev,
+      ])
+
+      setActiveChatId(chatId)
+
+      window.history.replaceState(
+        {},
+        '',
+        `?chat=${chatId}`,
+      )
     }
 
-    const finalMessages = [
-      ...updatedMessages,
-      errorMessage,
-    ]
+    setMessages(updatedMessages)
+    setIsLoading(true)
 
-    setMessages(finalMessages)
+    try {
+      const result = await sendMessage(text)
 
-    await updateChatMessages(
-      chatId,
-      finalMessages,
-    )
-  } finally {
-    setIsLoading(false)
+      const assistantMessage = {
+        role: 'assistant',
+        text: result.answer,
+        sources: result.sources || [],
+        status: result.status || 'success',
+      }
+
+      const finalMessages = [
+        ...updatedMessages,
+        assistantMessage,
+      ]
+
+      setMessages(finalMessages)
+
+      await updateChatMessages(
+        chatId,
+        finalMessages,
+      )
+    } catch (error) {
+      console.error('Chat error:', error)
+
+      const errorMessage = {
+        role: 'assistant',
+        text:
+          error?.message ||
+          'Unable to get a response from the counselor. Please try again.',
+        sources: [],
+        status: 'error',
+      }
+
+      const finalMessages = [
+        ...updatedMessages,
+        errorMessage,
+      ]
+
+      setMessages(finalMessages)
+
+      await updateChatMessages(
+        chatId,
+        finalMessages,
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
-}
 
   const handleRegenerate = async (messageIndex) => {
     if (isLoading || !user) return
@@ -330,30 +276,39 @@ useEffect(() => {
           updatedMessages,
         )
       }
+    } catch (error) {
+      console.error(
+        'Regenerate error:',
+        error,
+      )
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleSelectChat = (chat) => {
-  setActiveChatId(chat.id)
-  setMessages(chat.messages || [])
-  setIsLoading(false)
+    setActiveChatId(chat.id)
+    setMessages(chat.messages || [])
+    setIsLoading(false)
 
-  window.history.replaceState(
-    {},
-    '',
-    `?chat=${chat.id}`,
-  )
-}
+    window.history.replaceState(
+      {},
+      '',
+      `?chat=${chat.id}`,
+    )
+  }
 
- const handleNewChat = () => {
-  setMessages([])
-  setActiveChatId(null)
-  setIsLoading(false)
+  const handleNewChat = () => {
+    setMessages([])
+    setActiveChatId(null)
+    setIsLoading(false)
 
-  window.history.replaceState({}, '', window.location.pathname)
-}
+    window.history.replaceState(
+      {},
+      '',
+      window.location.pathname,
+    )
+  }
 
   const handleRenameChat = async (
     chatId,
@@ -379,7 +334,10 @@ useEffect(() => {
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Failed to rename chat:', error)
+      console.error(
+        'Failed to rename chat:',
+        error,
+      )
     }
   }
 
@@ -404,7 +362,10 @@ useEffect(() => {
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Failed to delete chat:', error)
+      console.error(
+        'Failed to delete chat:',
+        error,
+      )
     }
   }
 
@@ -432,12 +393,17 @@ useEffect(() => {
 
     const { error } = await supabase
       .from('chats')
-      .update({ pinned: nextPinned })
+      .update({
+        pinned: nextPinned,
+      })
       .eq('id', chatId)
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Failed to update pinned state:', error)
+      console.error(
+        'Failed to update pinned state:',
+        error,
+      )
     }
   }
 
